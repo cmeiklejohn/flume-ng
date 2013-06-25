@@ -37,6 +37,7 @@ import org.apache.flume.Channel;
 import org.apache.flume.Clock;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
+import org.apache.flume.event.EventHelper;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.SystemClock;
 import org.apache.flume.Transaction;
@@ -350,6 +351,10 @@ public class HDFSEventSink extends AbstractSink implements Configurable {
         Event event = channel.take();
         if (event == null) {
           break;
+        }
+
+        if (LOG.isInfoEnabled()) {
+          LOG.info("Event: " + EventHelper.dumpEvent(event));
         }
 
         // reconstruct the path name by substituting place holders
