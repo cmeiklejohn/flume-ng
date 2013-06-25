@@ -25,6 +25,7 @@ import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -69,6 +70,7 @@ public class HDFSEventSink extends AbstractSink implements Configurable {
 
   private static String DIRECTORY_DELIMITER = System.getProperty("file.separator");
 
+  private static final boolean defaultSingleBucket = false;
   private static final long defaultRollInterval = 30;
   private static final long defaultRollSize = 1024;
   private static final long defaultRollCount = 10;
@@ -105,6 +107,7 @@ public class HDFSEventSink extends AbstractSink implements Configurable {
   private final HDFSWriterFactory writerFactory;
   private WriterLinkedHashMap sfWriters;
 
+  private boolean singleBucket;
   private long rollInterval;
   private long rollSize;
   private long rollCount;
@@ -196,6 +199,7 @@ public class HDFSEventSink extends AbstractSink implements Configurable {
     inUseSuffix = context.getString("hdfs.inUseSuffix", defaultInUseSuffix);
     String tzName = context.getString("hdfs.timeZone");
     timeZone = tzName == null ? null : TimeZone.getTimeZone(tzName);
+    singleBucket = context.getBoolean("hdfs.singleBucket", defaultSingleBucket);
     rollInterval = context.getLong("hdfs.rollInterval", defaultRollInterval);
     rollSize = context.getLong("hdfs.rollSize", defaultRollSize);
     rollCount = context.getLong("hdfs.rollCount", defaultRollCount);
@@ -393,8 +397,17 @@ public class HDFSEventSink extends AbstractSink implements Configurable {
           writers.add(bucketWriter);
         }
 
-        // Write the data to HDFS
-        bucketWriter.append(event);
+        // Extract header information, as well as bucket and key.
+        Map<String, String> headers = event.getHeaders();
+        String destinationName = headers.get("destinationName");
+
+        if(singleBucket && destinationName != null) {
+          // Write the data to HDFS
+          bucketWriter.appendSingle(event, destinationName);
+        } else {
+          // Write the data to HDFS
+          bucketWriter.append(event);
+        }
       }
 
       if (txnEventCount == 0) {

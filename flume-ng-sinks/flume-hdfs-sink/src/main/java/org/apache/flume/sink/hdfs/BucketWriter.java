@@ -18,6 +18,7 @@
 
 package org.apache.flume.sink.hdfs;
 
+import java.util.Map;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Callable;
@@ -358,6 +359,78 @@ class BucketWriter {
       }
     });
     batchCounter = 0;
+  }
+
+  /**
+   * Write a single object to HDFS.
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public synchronized void appendSingle(final Event event, final String destinationName)
+    throws IOException, InterruptedException {
+    if ((filePath == null) || (writer == null)) {
+      throw new IOException("Invalid file settings");
+    }
+
+    final Configuration config = new Configuration();
+    // disable FileSystem JVM shutdown hook
+    config.setBoolean("fs.automatic.close", false);
+
+    synchronized (staticLock) {
+      checkAndThrowInterruptedException();
+
+      if(destinationName != null) {
+        try {
+          bucketPath = filePath + "/" + destinationName + inUseSuffix;
+          targetPath = filePath + "/" + destinationName;
+
+          LOG.info("Creating " + bucketPath);
+
+          callWithTimeout(new CallRunner<Void>() {
+            @Override
+            public Void call() throws Exception {
+              // Open.
+              if (codeC == null) {
+                // Need to get reference to FS using above config before underlying
+                // writer does in order to avoid shutdown hook & IllegalStateExceptions
+                fileSystem = new Path(bucketPath).getFileSystem(config);
+                writer.open(bucketPath);
+              } else {
+                // need to get reference to FS before writer does to avoid shutdown hook
+                fileSystem = new Path(bucketPath).getFileSystem(config);
+                writer.open(bucketPath, codeC, compType);
+              }
+
+              // Increment counters.
+              sinkCounter.incrementConnectionCreatedCount();
+              resetCounters();
+
+              // Write.
+              sinkCounter.incrementEventDrainAttemptCount();
+              writer.append(event);
+              writer.sync();
+
+              // Close.
+              writer.close();
+              sinkCounter.incrementConnectionClosedCount();
+
+              // Rename.
+              renameBucket();
+
+              return null;
+            }
+          });
+        } catch (Exception ex) {
+          sinkCounter.incrementConnectionFailedCount();
+          if (ex instanceof IOException) {
+            throw (IOException) ex;
+          } else {
+            throw Throwables.propagate(ex);
+          }
+        }
+      }
+    }
   }
 
   /**
