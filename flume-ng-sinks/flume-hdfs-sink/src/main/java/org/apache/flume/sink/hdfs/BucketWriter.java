@@ -434,9 +434,9 @@ class BucketWriter {
     }
 
     // update statistics
-    processSize += event.getBody().length;
-    eventCounter++;
-    batchCounter++;
+    this.processSize += event.getBody().length;
+    this.eventCounter++;
+    this.batchCounter++;
 
     if (batchCounter == batchSize) {
       flush();
