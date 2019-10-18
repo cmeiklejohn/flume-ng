@@ -31,7 +31,7 @@ limitations under the License.
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <solr.version>4.3.0</solr.version>
+    <solr.version>8.2.0</solr.version>
     <solr.expected.version>4.3.0</solr.expected.version> <!-- sanity check to verify we actually run against the expected version rather than some outdated version -->
     <tika.version>1.3</tika.version>
     <cdk.version>0.9.1-cdh4.3.0-SNAPSHOT</cdk.version>
