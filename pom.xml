@@ -739,7 +739,7 @@ limitations under the License.
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
         <scope>compile</scope>
-        <version>2.4.1</version>
+        <version>3.16.3</version>
       </dependency>
 
       <dependency>
